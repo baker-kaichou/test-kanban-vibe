@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NGP Task Tracker</title>
+    <style>
+      :root {
+        /* Theme colors - based on #9a816d */
+        --primary-color: #9a816d;
+        --primary-light: #c9b099;
+        --primary-dark: #6d5644;
+
+        /* Dark theme (default) */
+        --bg-color: #121212;
+        --card-bg: #1e1e1e;
+        --text-color: #e0e0e0;
+        --border-color: #333333;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+        --hover-color: #2a2a2a;
+        --modal-bg: #252525;
+        --error-color: #cf6679;
+      }
+
+      [data-theme="light"] {
+        --bg-color: #f5f5f5;
+        --card-bg: #ffffff;
+        --text-color: #333333;
+        --border-color: #e0e0e0;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --hover-color: #eeeeee;
+        --modal-bg: #ffffff;
+        --error-color: #b00020;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+          "Helvetica Neue", sans-serif;
+        transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      .container {
+        padding: 1rem;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      h1 {
+        color: var(--primary-light);
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      /* Toggle Switch */
+      .theme-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+      }
+
+      .theme-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        transition: 0.4s;
+        border-radius: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 6px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 3px;
+        background-color: var(--primary-color);
+        transition: 0.4s;
+        border-radius: 50%;
+        z-index: 2;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(28px);
+      }
+
+      .slider .sun,
+      .slider .moon {
+        font-size: 14px;
+        z-index: 1;
+      }
+
+      .add-task-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 2px 4px var(--shadow-color);
+        transition: all 0.2s ease;
+      }
+
+      .add-task-btn:hover {
+        background-color: var(--primary-dark);
+        transform: translateY(-2px);
+      }
+
+      .add-task-btn:active {
+        transform: translateY(0);
+      }
+
+      .board {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+        min-height: calc(100vh - 170px);
+        width: 100%;
+      }
+
+      @media (max-width: 768px) {
+        .board {
+          flex-direction: column;
+          overflow-x: hidden;
+          overflow-y: auto;
+        }
+      }
+
+      .column {
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        flex: 1;
+        min-width: 280px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 2px 10px var(--shadow-color);
+        border: 1px solid var(--border-color);
+      }
+
+      @media (max-width: 768px) {
+        .column {
+          max-width: 100%;
+          min-width: 100%;
+          margin-bottom: 1rem;
+        }
+      }
+
+      .column-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .column-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .task-count {
+        background-color: var(--primary-light);
+        color: var(--bg-color);
+        padding: 0.15rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+      }
+
+      .task-list {
+        padding: 1rem;
+        flex-grow: 1;
+        overflow-y: auto;
+        min-height: 200px;
+      }
+
+      .task-card {
+        background-color: var(--bg-color);
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 2px 5px var(--shadow-color);
+        cursor: grab;
+        border-left: 4px solid var(--primary-color);
+        animation: fadeIn 0.3s ease;
+        position: relative;
+      }
+
+      .task-card:hover {
+        background-color: var(--hover-color);
+      }
+
+      .task-card.dragging {
+        opacity: 0.5;
+        box-shadow: 0 10px 15px var(--shadow-color);
+      }
+
+      .task-title {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
+
+      .task-desc {
+        color: var(--text-color);
+        opacity: 0.8;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        line-height: 1.4;
+      }
+
+      .task-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .task-assignee {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+      }
+
+      .assignee-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bg-color);
+        font-weight: 500;
+        font-size: 0.7rem;
+      }
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .modal {
+        background-color: var(--modal-bg);
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        transform: translateY(-20px);
+        transition: all 0.3s ease;
+        overflow: hidden;
+      }
+
+      .modal-overlay.active .modal {
+        transform: translateY(0);
+      }
+
+      .modal-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .modal-title {
+        font-weight: 500;
+        color: var(--primary-light);
+      }
+
+      .close-modal {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: var(--text-color);
+      }
+
+      .modal-body {
+        padding: 1rem;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        resize: vertical;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(154, 129, 109, 0.2);
+      }
+
+      .modal-footer {
+        padding: 1rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+      }
+
+      .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--hover-color);
+      }
+
+      .btn-primary {
+        background-color: var(--primary-color);
+        border: none;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: var(--primary-dark);
+      }
+
+      /* Error popup */
+      .error-popup {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: var(--error-color);
+        color: white;
+        padding: 1rem;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 2000;
+        max-width: 300px;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      .error-popup.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      /* Delete zone */
+      .delete-zone {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background-color: var(--error-color);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        opacity: 0;
+        transition: all 0.3s ease;
+        z-index: 900;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .delete-zone.active {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+
+      .delete-zone.highlight {
+        background-color: #d32f2f;
+        box-shadow: 0 0 0 4px rgba(211, 47, 47, 0.4);
+      }
+
+      /* Animations */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+
+      /* Confetti styles */
+      .confetti-container {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 999;
+        pointer-events: none;
+      }
+
+      .confetti {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: #f0f; /* Fallback, will be overridden by JS */
+        border-radius: 0; /* Default, can be overridden for circle */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18" />
+            <path d="M9 21V9" />
+          </svg>
+          NGP Task Tracker
+        </h1>
+        <div class="controls">
+          <label class="theme-switch">
+            <input type="checkbox" id="theme-toggle" />
+            <span class="slider">
+              <span class="sun">☀️</span>
+              <span class="moon">🌙</span>
+            </span>
+          </label>
+          <button class="add-task-btn" id="add-task-btn">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Task
+          </button>
+        </div>
+      </header>
+
+      <div class="board" id="board">
+        <div class="column" data-column="todo">
+          <div class="column-header">
+            <div class="column-title">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+              To Do
+              <span class="task-count" id="todo-count">0</span>
+            </div>
+          </div>
+          <div class="task-list" data-tasks="todo"></div>
+        </div>
+
+        <div class="column" data-column="progress">
+          <div class="column-header">
+            <div class="column-title">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                ></path>
+              </svg>
+              In Progress
+              <span class="task-count" id="progress-count">0</span>
+            </div>
+          </div>
+          <div class="task-list" data-tasks="progress"></div>
+        </div>
+
+        <div class="column" data-column="done">
+          <div class="column-header">
+            <div class="column-title">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 6L9 17l-5-5"></path>
+              </svg>
+              Done
+              <span class="task-count" id="done-count">0</span>
+            </div>
+          </div>
+          <div class="task-list" data-tasks="done"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="task-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Add New Task</h3>
+          <button class="close-modal" id="close-modal">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="task-form">
+            <div class="form-group">
+              <label for="task-title">Title</label>
+              <input
+                type="text"
+                id="task-title"
+                required
+                placeholder="Enter task title"
+              />
+            </div>
+            <div class="form-group">
+              <label for="task-description">Description</label>
+              <textarea
+                id="task-description"
+                rows="4"
+                required
+                placeholder="Enter task description"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="task-assignee">Assignee</label>
+              <input
+                type="text"
+                id="task-assignee"
+                required
+                placeholder="Enter assignee name"
+              />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="cancel-task">Cancel</button>
+          <button class="btn btn-primary" id="save-task">Save Task</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error popup -->
+    <div class="error-popup" id="error-popup"></div>
+
+    <!-- Delete zone -->
+    <div class="delete-zone" id="delete-zone">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path
+          d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+        ></path>
+        <line x1="10" y1="11" x2="10" y2="17"></line>
+        <line x1="14" y1="11" x2="14" y2="17"></line>
+      </svg>
+      Drop here to delete
+    </div>
+
+    <!-- Confetti container -->
+    <div class="confetti-container" id="confetti-container"></div>
+
+    <script>
+      // Global variables
+      let tasks = {
+        todo: [],
+        progress: [],
+        done: [],
+      };
+      let draggingElement = null;
+      // taskIdCounter is initialized in initApp but Date.now() is used for new IDs.
+      // This is fine, Date.now() provides sufficient uniqueness for this app.
+      let taskIdCounter = 1;
+
+      // DOM Elements
+      const board = document.getElementById("board");
+      const taskLists = document.querySelectorAll(".task-list");
+      const addTaskBtn = document.getElementById("add-task-btn");
+      const taskModal = document.getElementById("task-modal");
+      const closeModalBtn = document.getElementById("close-modal");
+      const cancelTaskBtn = document.getElementById("cancel-task");
+      const saveTaskBtn = document.getElementById("save-task");
+      const taskForm = document.getElementById("task-form");
+      const taskTitleInput = document.getElementById("task-title");
+      const taskDescInput = document.getElementById("task-description");
+      const taskAssigneeInput = document.getElementById("task-assignee");
+      const errorPopup = document.getElementById("error-popup");
+      const deleteZone = document.getElementById("delete-zone");
+      const themeToggle = document.getElementById("theme-toggle");
+      const confettiContainer = document.getElementById("confetti-container");
+
+      // Load tasks from localStorage
+      function loadTasks() {
+        const savedTasks = localStorage.getItem("kanbanTasks");
+        if (savedTasks) {
+          tasks = JSON.parse(savedTasks);
+        }
+        updateBoard();
+      }
+
+      // Save tasks to localStorage
+      function saveTasks() {
+        localStorage.setItem("kanbanTasks", JSON.stringify(tasks));
+        updateTaskCounts();
+      }
+
+      // Update task counts
+      function updateTaskCounts() {
+        document.getElementById("todo-count").textContent = tasks.todo.length;
+        document.getElementById("progress-count").textContent =
+          tasks.progress.length;
+        document.getElementById("done-count").textContent = tasks.done.length;
+      }
+
+      // Create task card element
+      function createTaskCard(task) {
+        const taskCard = document.createElement("div");
+        taskCard.className = "task-card";
+        taskCard.draggable = true;
+        taskCard.dataset.id = task.id;
+
+        const initials = task.assignee
+          .split(" ")
+          .map((word) => word.charAt(0).toUpperCase())
+          .slice(0, 2)
+          .join("");
+
+        taskCard.innerHTML = `
+                <h3 class="task-title">${task.title}</h3>
+                <p class="task-desc">${task.description}</p>
+                <div class="task-footer">
+                    <div class="task-assignee">
+                        <div class="assignee-avatar">${initials}</div>
+                        <span>${task.assignee}</span>
+                    </div>
+                </div>
+            `;
+
+        // Add drag event listeners
+        taskCard.addEventListener("dragstart", handleDragStart);
+        taskCard.addEventListener("dragend", handleDragEnd);
+
+        return taskCard;
+      }
+
+      // Update the entire board
+      function updateBoard() {
+        // Clear all task lists
+        taskLists.forEach((list) => {
+          list.innerHTML = "";
+        });
+
+        // Populate todo list
+        const todoList = document.querySelector('[data-tasks="todo"]');
+        tasks.todo.forEach((task) => {
+          todoList.appendChild(createTaskCard(task));
+        });
+
+        // Populate in progress list
+        const progressList = document.querySelector('[data-tasks="progress"]');
+        tasks.progress.forEach((task) => {
+          progressList.appendChild(createTaskCard(task));
+        });
+
+        // Populate done list
+        const doneList = document.querySelector('[data-tasks="done"]');
+        tasks.done.forEach((task) => {
+          doneList.appendChild(createTaskCard(task));
+        });
+
+        updateTaskCounts();
+      }
+
+      // Open task modal
+      function openTaskModal() {
+        taskModal.classList.add("active");
+        taskTitleInput.focus();
+      }
+
+      // Close task modal
+      function closeTaskModal() {
+        taskModal.classList.remove("active");
+        taskForm.reset();
+      }
+
+      // Show error popup
+      function showError(message) {
+        errorPopup.textContent = message;
+        errorPopup.classList.add("show");
+
+        setTimeout(() => {
+          errorPopup.classList.remove("show");
+        }, 3000);
+      }
+
+      // Check for duplicate task
+      function isDuplicateTask(title) {
+        const allTasks = [...tasks.todo, ...tasks.progress, ...tasks.done];
+        return allTasks.some(
+          (task) => task.title.toLowerCase() === title.toLowerCase(),
+        );
+      }
+
+      // Add new task
+      function addNewTask() {
+        const title = taskTitleInput.value.trim();
+        const description = taskDescInput.value.trim();
+        const assignee = taskAssigneeInput.value.trim();
+
+        if (!title || !description || !assignee) {
+          showError("All fields are required");
+          return;
+        }
+
+        if (isDuplicateTask(title)) {
+          showError("A task with this title already exists");
+          return;
+        }
+
+        const newTask = {
+          id: Date.now(), // Using timestamp for unique ID
+          title,
+          description,
+          assignee,
+        };
+
+        tasks.todo.push(newTask);
+        saveTasks();
+        updateBoard();
+        closeTaskModal();
+      }
+
+      // Move task between columns
+      function moveTask(taskId, fromColumn, toColumn) {
+        // Find task in the 'from' column
+        const taskIndex = tasks[fromColumn].findIndex(
+          (task) => task.id == taskId,
+        );
+
+        if (taskIndex === -1) return;
+
+        // Remove from old column and add to new column
+        const [movedTask] = tasks[fromColumn].splice(taskIndex, 1);
+        tasks[toColumn].push(movedTask);
+
+        // If moved to 'done', trigger confetti
+        if (toColumn === "done") {
+          createConfetti();
+        }
+
+        saveTasks();
+      }
+
+      // Delete task
+      function deleteTask(taskId) {
+        // Check all columns for the task
+        ["todo", "progress", "done"].forEach((column) => {
+          const taskIndex = tasks[column].findIndex(
+            (task) => task.id == taskId,
+          );
+          if (taskIndex !== -1) {
+            tasks[column].splice(taskIndex, 1);
+          }
+        });
+
+        saveTasks();
+        updateBoard();
+      }
+
+      // Drag and Drop Handlers
+      function handleDragStart(e) {
+        draggingElement = e.target;
+        e.target.classList.add("dragging");
+
+        // Show delete zone
+        deleteZone.classList.add("active");
+
+        // Set data for drag operation
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", e.target.dataset.id);
+      }
+
+      function handleDragEnd(e) {
+        if (e.target) {
+          e.target.classList.remove("dragging");
+        }
+        draggingElement = null;
+
+        // Hide delete zone
+        deleteZone.classList.remove("active");
+        deleteZone.classList.remove("highlight");
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+
+        // Highlight delete zone if dragging over it
+        if (e.currentTarget.id === "delete-zone") {
+          e.currentTarget.classList.add("highlight");
+        }
+      }
+
+      function handleDragLeave(e) {
+        if (e.currentTarget.id === "delete-zone") {
+          e.currentTarget.classList.remove("highlight");
+        }
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+
+        // If dropping on delete zone
+        if (e.currentTarget.id === "delete-zone") {
+          const taskId = e.dataTransfer.getData("text/plain");
+          deleteTask(taskId);
+          deleteZone.classList.remove("highlight");
+          return;
+        }
+
+        // Get target column and task id
+        const targetColumn = e.currentTarget.dataset.tasks;
+        const taskId = e.dataTransfer.getData("text/plain");
+
+        if (!taskId || !targetColumn) return;
+
+        // Find which column the task is coming from
+        let fromColumn;
+        for (const column in tasks) {
+          if (tasks[column].some((task) => task.id == taskId)) {
+            fromColumn = column;
+            break;
+          }
+        }
+
+        if (fromColumn && fromColumn !== targetColumn) {
+          moveTask(taskId, fromColumn, targetColumn);
+          updateBoard(); // Update board after moving
+        }
+      }
+
+      // Confetti animation
+      function createConfetti() {
+        const colors = [
+          "#9a816d",
+          "#c9b099",
+          "#6d5644",
+          "#e8c9b0",
+          "#4e3e30",
+        ];
+        const shapes = ["circle", "square", "triangle"];
+
+        // Clear existing confetti
+        confettiContainer.innerHTML = "";
+
+        // Create confetti pieces
+        for (let i = 0; i < 100; i++) {
+          const confetti = document.createElement("div");
+          confetti.className = "confetti";
+
+          // Random position
+          const startX = Math.random() * window.innerWidth;
+          const startY = -20; // Start above the screen
+
+          // Random color
+          const color = colors[Math.floor(Math.random() * colors.length)];
+
+          // Random shape
+          const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+          // Random size
+          const size = Math.random() * 10 + 5;
+
+          // Apply styles
+          confetti.style.left = `${startX}px`;
+          confetti.style.top = `${startY}px`;
+          confetti.style.backgroundColor = color;
+          confetti.style.width = `${size}px`;
+          confetti.style.height = `${size}px`;
+
+          // Apply shape
+          if (shape === "circle") {
+            confetti.style.borderRadius = "50%";
+          } else if (shape === "triangle") {
+            confetti.style.width = "0";
+            confetti.style.height = "0";
+            confetti.style.backgroundColor = "transparent";
+            confetti.style.borderLeft = `${size}px solid transparent`;
+            confetti.style.borderRight = `${size}px solid transparent`;
+            confetti.style.borderBottom = `${size * 1.5}px solid ${color}`;
+          }
+
+          // Random rotation
+          const rotation = Math.random() * 360;
+          confetti.style.transform = `rotate(${rotation}deg)`;
+
+          // Add to container
+          confettiContainer.appendChild(confetti);
+
+          // Animate
+          const duration = Math.random() * 3 + 2; // seconds
+          const delay = Math.random() * 2; // seconds
+
+          // Fall and fade animation using Web Animations API
+          confetti.animate(
+            [
+              {
+                transform: `translateY(0) rotate(${rotation}deg)`,
+                opacity: 1,
+              },
+              {
+                transform: `translateY(${
+                  window.innerHeight + 50
+                }px) rotate(${rotation + 720}deg)`, // Fall below screen
+                opacity: 0,
+              },
+            ],
+            {
+              duration: duration * 1000,
+              delay: delay * 1000,
+              easing: "cubic-bezier(0.215, 0.61, 0.355, 1)",
+              fill: "forwards", // Keep final state
+            },
+          );
+        }
+
+        // Remove confetti elements after animation completes to clean up DOM
+        setTimeout(() => {
+          confettiContainer.innerHTML = "";
+        }, (2 + 3 + 1) * 1000); // Max delay + max duration + buffer
+      }
+
+      // Theme switching
+      function initTheme() {
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem("theme");
+
+        if (savedTheme === "light") {
+          document.documentElement.setAttribute("data-theme", "light");
+          themeToggle.checked = true;
+        } else {
+          // Default to dark
+          document.documentElement.setAttribute("data-theme", "dark");
+          themeToggle.checked = false;
+        }
+      }
+
+      function toggleTheme() {
+        if (themeToggle.checked) {
+          document.documentElement.setAttribute("data-theme", "light");
+          localStorage.setItem("theme", "light");
+        } else {
+          document.documentElement.setAttribute("data-theme", "dark");
+          localStorage.setItem("theme", "dark");
+        }
+      }
+
+      // Event Listeners
+      function setupEventListeners() {
+        // Add task button
+        addTaskBtn.addEventListener("click", openTaskModal);
+
+        // Modal close buttons
+        closeModalBtn.addEventListener("click", closeTaskModal);
+        cancelTaskBtn.addEventListener("click", closeTaskModal);
+
+        // Save task button
+        saveTaskBtn.addEventListener("click", addNewTask);
+
+        // Theme toggle
+        themeToggle.addEventListener("change", toggleTheme);
+
+        // Close modal when clicking outside
+        taskModal.addEventListener("click", (e) => {
+          if (e.target === taskModal) {
+            closeTaskModal();
+          }
+        });
+
+        // Form submission (prevents default and calls addNewTask)
+        taskForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          addNewTask();
+        });
+
+        // Add drop zone event listeners to task lists
+        taskLists.forEach((list) => {
+          list.addEventListener("dragover", handleDragOver);
+          list.addEventListener("drop", handleDrop);
+        });
+
+        // Delete zone event listeners
+        deleteZone.addEventListener("dragover", handleDragOver);
+        deleteZone.addEventListener("dragleave", handleDragLeave);
+        deleteZone.addEventListener("drop", handleDrop);
+
+        // Keyboard events for accessibility (e.g., close modal with Escape key)
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && taskModal.classList.contains("active")) {
+            closeTaskModal();
+          }
+        });
+      }
+
+      // Initialize the app
+      function initApp() {
+        initTheme();
+        loadTasks(); // This also calls updateBoard and updateTaskCounts
+        setupEventListeners();
+        // updateTaskCounts(); // Called within loadTasks and saveTasks
+
+        // Initialize taskIdCounter based on existing tasks to avoid potential (though unlikely) ID collisions
+        // if tasks were manually added to localStorage with high numeric IDs.
+        // However, Date.now() is used for new IDs, making this less critical.
+        const allTaskIds = [
+          ...tasks.todo.map((t) => t.id),
+          ...tasks.progress.map((t) => t.id),
+          ...tasks.done.map((t) => t.id),
+        ].filter(id => typeof id === 'number'); // Ensure only numbers are considered
+
+        taskIdCounter = allTaskIds.length > 0 ? Math.max(...allTaskIds, 0) + 1 : 1;
+      }
+
+      // Start the app when DOM is loaded
+      document.addEventListener("DOMContentLoaded", initApp);
+    </script>
+  </body>
+</html>
